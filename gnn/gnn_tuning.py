@@ -62,6 +62,7 @@ sweep_configuration = {
         'batch_size': {'values': [32, 64, 128]},
         'hidden_dim': {'values': [32, 64, 128, 300, 512]},
         'num_layers': {'values': [2, 3, 4, 5, 6, 7]},
+        'readout': {'values': ['max', 'sum', 'mean']},
         'lr': {'values': [0.001, 0.003, 0.005]},
         'epochs': {'values': [100, 300]},
         'optimizer': {'values': ['adam', 'sgd']},
@@ -77,12 +78,13 @@ def main():
     args.batch_size = wandb.config.batch_size
     args.hidden_dim = wandb.config.hidden_dim
     args.num_layers = wandb.config.num_layers
+    args.readout = wandb.config.readout
     args.lr = wandb.config.lr
     args.epochs = wandb.config.epochs
     args.optimizer = wandb.config.optimizer
     args.weight_decay = wandb.config.weight_decay
     
-    wandb.run.name = f'tg{args.tg_num}-{args.target}-{args.optimizer}'
+    wandb.run.name = f'tg{args.tg_num}-{args.model}-{args.optimizer}'
     
     device = torch.device('cpu')
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -105,7 +107,7 @@ def main():
     params_list = []
     optim_params_list = []
 
-    for seed in range(args.num_runs):
+    for seed in range(4):
         logging.info(f'======================= Run: {seed} =================')
         set_seed(seed)
         
@@ -185,7 +187,6 @@ def main():
     logging.info('')
     logging.info('Model: {}'.format(args.model))
     logging.info('TG: {}'.format(args.tg_num))
-    logging.info('Target: {}'.format(args.target))
 
     logging.info('')
     logging.info('test f1: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_f1s) * 100, np.std(test_f1s) * 100))

@@ -59,13 +59,14 @@ class GraphConvolutionalNetwork(nn.Module):
     def forward(self, data):
         x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
 
-        node_features = self.atom_encoder(x)
+        initial_emb = self.atom_encoder(x)
+        node_features = initial_emb
         for conv in self.convs:
             node_features = conv(node_features, edge_index, edge_attr)
 
         # graph embedding
         for readout in self.readout_layer:
-            graph_feature = readout(node_features, batch)
+            graph_feature = readout(node_features + initial_emb, batch)
 
         logits = self.cls(graph_feature)
 
