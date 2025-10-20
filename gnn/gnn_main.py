@@ -150,7 +150,7 @@ def main():
         'test_f1s': test_f1s
     }
     
-    save_path = f'saved_result/tg{args.tg_num}'
+    save_path = f'../saved_result/tg{args.tg_num}'
     if os.path.isdir(save_path):
         pass
     else:
