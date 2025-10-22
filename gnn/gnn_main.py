@@ -11,8 +11,8 @@ from torch.optim import Adam, SGD
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
-from module.load_dataset import GenoDataset
-from module.utils import set_seed, get_seed
+from module.load_dataset import DARTDataset
+from module.utils import set_seed
 
 # gcn
 from model.gcn import (
@@ -58,7 +58,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Cuda Available: {torch.cuda.is_available()}, {device}')
 
-    dataset = GenoDataset(root = 'dataset', tg_num = args.tg_num)
+    dataset = DARTDataset(root = 'dataset', tg_num = args.tg_num)
 
     avg_nodes = 0.0
     avg_edge_index = 0.0
