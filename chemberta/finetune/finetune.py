@@ -41,7 +41,7 @@ from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+# import seaborn as sns
 import torch
 # from absl import app, flags
 from torch.utils.data import random_split
@@ -79,7 +79,7 @@ def load_argument():
     parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
-        default="../pretrained_cks/base",
+        default="../pretrained_cks/77m",
         help="Path to pretrained model or HuggingFace model ID."
     )
     parser.add_argument(
@@ -113,7 +113,7 @@ def load_argument():
     parser.add_argument(
         "--n_seeds",
         type=int,
-        default=5,
+        default=10,
         help="Number of random seeds for best model evaluation."
     )
 
@@ -136,7 +136,7 @@ def load_argument():
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="../pretrained_cks/base",
+        default="../pretrained_cks/77m",
         help="Path to tokenizer."
     )
     parser.add_argument("--max_tokenizer_len", type=int, default=512, help="")
@@ -153,10 +153,10 @@ def load_argument():
     return args
 
 args = load_argument()
+print(args)
 
-
-# os.environ["TOKENIZERS_PARALLELISM"] = "false"
-# os.environ["WANDB_DISABLED"] = "true"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["WANDB_DISABLED"] = "true"
 
 
 def main():
@@ -296,9 +296,10 @@ def finetune_single_dataset(dataset_name, dataset_type, run_dir, is_molnet):
 
     def custom_hp_space_optuna(trial):
         return {
-            "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-6, 1e-2, log=True),
             "num_train_epochs": trial.suggest_int(
-                "num_train_epochs", 1, args.num_train_epochs_max
+                "num_train_epochs", 1, 100
+                # "num_train_epochs", 1, args.num_train_epochs_max
             ),
             "seed": trial.suggest_int("seed", 1, 10),
             "per_device_train_batch_size": trial.suggest_categorical(
