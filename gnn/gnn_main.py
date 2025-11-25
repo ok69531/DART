@@ -45,7 +45,7 @@ parser.add_argument('--lr', type = float, default = 0.001)
 parser.add_argument('--epochs', type = int, default = 100)
 parser.add_argument('--optimizer', type = str, default = 'adam')
 parser.add_argument('--weight_decay', type = float, default = 0)
-parser.add_argument('--num_runs', type = int, default = 10)
+parser.add_argument('--seed', type = int, default = 42)
 try:
     args = parser.parse_args()
 except:

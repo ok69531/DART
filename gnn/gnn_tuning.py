@@ -10,7 +10,12 @@ from torch.optim import Adam, SGD
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
-from module.load_dataset import DARTDataset
+from module.load_dataset import (
+    DARTDataset, 
+    FoldDataset, 
+    CrossValDataset,
+    build_cv_dataset
+)
 from module.utils import set_seed
 
 import wandb
@@ -46,7 +51,7 @@ parser.add_argument('--lr', type = float, default = 0.001)
 parser.add_argument('--epochs', type = int, default = 100)
 parser.add_argument('--optimizer', type = str, default = 'adam')
 parser.add_argument('--weight_decay', type = float, default = 0)
-parser.add_argument('--num_runs', type = int, default = 10)
+parser.add_argument('--seed', type = int, default = 42)
 try:
     args = parser.parse_args()
 except:
@@ -90,39 +95,20 @@ def main():
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Cuda Available: {torch.cuda.is_available()}, {device}')
 
-    dataset = DARTDataset(root = 'dataset', tg_num = args.tg_num)
-
-    avg_nodes = 0.0
-    avg_edge_index = 0.0
-    for i in range(len(dataset)):
-        avg_nodes += dataset[i].x.shape[0]
-        avg_edge_index += dataset[i].edge_index.shape[1]
-
-    avg_nodes /= len(dataset)
-    avg_edge_index /= len(dataset)
-    logging.info('graphs {}, avg_nodes {:.4f}, avg_edge_index {:.4f}'.format(len(dataset), avg_nodes, avg_edge_index/2))
+    dataset = build_cv_dataset(root = '../dataset', tg_num = args.tg_num)
 
     val_losses, val_aucs, val_f1s, val_accs, val_precs, val_recs = [], [], [], [], [], []
     test_losses, test_aucs, test_f1s, test_accs, test_precs, test_recs = [], [], [], [], [], []
-    params_list = []
-    optim_params_list = []
+    # params_list = []
+    # optim_params_list = []
 
-    for seed in range(4):
-        logging.info(f'======================= Run: {seed} =================')
-        set_seed(seed)
+    for f in range(1, 6):
+        logging.info(f'======================= Fold {f} =================')
+        set_seed(args.seed)
         
-        num_train = int(len(dataset) * args.train_frac)
-        num_valid = int(len(dataset) * args.val_frac)
-        num_test = len(dataset) - (num_train + num_valid)
-        assert num_train + num_valid + num_test == len(dataset)
-
-        indices = torch.arange(len(dataset))
-        train_idx, val_idx, test_idx = random_split(indices, [num_train, num_valid, num_test])
-
-        train_loader = DataLoader(dataset[list(train_idx)], batch_size = args.batch_size, shuffle = True)
-        val_loader = DataLoader(dataset[list(val_idx)], batch_size = args.batch_size, shuffle = False)
-        test_loader = DataLoader(dataset[list(test_idx)], batch_size = args.batch_size, shuffle = False)
-
+        train_loader = DataLoader(dataset[f'fold{f}'].train, batch_size = args.batch_size, shuffle = True)
+        val_loader = DataLoader(dataset[f'fold{f}'].valid, batch_size = args.batch_size, shuffle = False)
+        test_loader = DataLoader(dataset.test, batch_size = args.batch_size, shuffle = False)
 
         criterion = torch.nn.CrossEntropyLoss()
         if args.model == 'gin':
@@ -162,8 +148,8 @@ def main():
                 final_test_f1 = test_sub_metrics['f1']; final_test_auc = test_sub_metrics['auc']
                 final_test_acc = test_sub_metrics['accuracy']; final_test_prec = test_sub_metrics['precision']; final_test_rec = test_sub_metrics['recall']
                 
-                params = deepcopy(model.state_dict())
-                optim_params = deepcopy(optimizer.state_dict())
+                # params = deepcopy(model.state_dict())
+                # optim_params = deepcopy(optimizer.state_dict())
                 
         val_losses.append(best_val_loss); test_losses.append(final_test_loss)
         val_aucs.append(best_val_auc); test_aucs.append(final_test_auc)
@@ -171,7 +157,7 @@ def main():
         val_accs.append(best_val_acc); test_accs.append(final_test_acc)
         val_precs.append(best_val_prec); test_precs.append(final_test_prec)
         val_recs.append(best_val_rec); test_recs.append(final_test_rec)
-        params_list.append(params); optim_params_list.append(optim_params)
+        # params_list.append(params); optim_params_list.append(optim_params)
 
     wandb.log({
         'avg val auc': np.mean(val_aucs),

@@ -95,36 +95,44 @@ def get_bond_feature_dims():
 
 
 class DARTDataset(InMemoryDataset):
-    def __init__(self, root, tg_num, removeHs = False, transform = None, pre_transform = None, pre_fileter = None):
+    def __init__(self, root, tg_num, split = 'train', fold = 1, removeHs = False, transform = None, pre_transform = None, pre_fileter = None):
         '''
             dataset: tg414, tg421
         '''
         self.root = root
         self.tg = tg_num
         self.dataset = 'tg' + str(tg_num)
+        self.split = split
+        self.fold = fold
         self.removeHs = removeHs
         super(DARTDataset, self).__init__(root, transform, pre_transform, pre_fileter)
         self.data, self.slices = torch.load(self.processed_paths[0])
     
     @property
     def raw_dir(self):
-        return os.path.join(self.root, self.dataset, 'raw')
+        return os.path.join(self.root, 'raw', self.dataset.upper())
     
     @property
     def processed_dir(self):
-        return os.path.join(self.root, self.dataset, 'processed')
+        return os.path.join(self.root, 'processed', self.dataset.upper())
     
     @property
     def processed_file_names(self):
-        return ['data.pt']
+        if self.split == 'test':
+            return [f'{self.split}.pt']
+        else:
+            return [f'{self.split}{self.fold}.pt']
     
     @property
     def num_classes(self):
         return 2
     
     def _load_raw_dataset(self):
-        path = f'../dataset/dart_{self.dataset}.xlsx'
-        self.raw_data = pd.read_excel(path)
+        if self.split == 'test':
+            path = os.path.join(self.raw_dir, f'{self.split}.csv')
+        else:    
+            path = os.path.join(self.raw_dir, self.split + f'_fold{self.fold}.csv')
+        self.raw_data = pd.read_csv(path)
     
     def _atom_feature(self, mol):
         atom_feature_list = []
@@ -183,7 +191,7 @@ class DARTDataset(InMemoryDataset):
         data_list = []
         for i in range(len(self.raw_data)):
             data = self.smiles_to_graph(smiles[i])
-            data.y = torch.tensor(self.raw_data.toxicity[i]).to(torch.long)
+            data.y = torch.tensor(self.raw_data.Toxicity[i]).to(torch.long)
             data.smiles = smiles[i]
             data.idx = i
             
@@ -204,10 +212,71 @@ class DARTDataset(InMemoryDataset):
             data_list = [self.pre_transform(data) for data in data_list]
         
         torch.save(self.collate(data_list), self.processed_paths[0])
+        # torch.save(self.collate(data_list), os.path.join(self.processed_paths[0], self.processed_file_names[0]))
+
+
+class FoldDataset:
+    """
+    한 개 fold에 대한 (train, valid) 세트를 담는 컨테이너.
+    내부 train, valid는 InMemoryDataset(또는 GraphDataset) 객체.
+    """
+    def __init__(self, train_dataset, valid_dataset, name=None):
+        self.train = train_dataset
+        self.valid = valid_dataset
+        self.name = name
+
+    def __repr__(self):
+        return f"FoldDataset(name={self.name}, train_len={len(self.train)}, valid_len={len(self.valid)})"
+
+
+class CrossValDataset:
+    """
+    k-fold cross validation을 위한 상위 컨테이너.
+    data['fold0'].train, data['fold0'].valid 이렇게 접근 가능.
+    """
+    def __init__(self, fold_dict, test_dataset=None):
+        """
+        fold_dict: {"fold0": FoldDataset, "fold1": FoldDataset, ...}
+        test_dataset: InMemoryDataset (optional)
+        """
+        self.folds = fold_dict
+        self.test = test_dataset
+
+    def __getitem__(self, key):
+        return self.folds[key]
+
+    def __len__(self):
+        return len(self.folds)
+
+    def keys(self):
+        return self.folds.keys()
+
+    def items(self):
+        return self.folds.items()
+
+    def values(self):
+        return self.folds.values()
+
+
+def build_cv_dataset(root, tg_num):
+
+    fold_dict = {}
+    for i in range(1, 6):
+        train_ds = DARTDataset(root = root, tg_num = tg_num, split = 'train', fold = i)
+        valid_ds = DARTDataset(root = root, tg_num = tg_num, split = 'valid', fold = i)
+        fold_ds = FoldDataset(train_ds, valid_ds, name=f"fold{i}")
+        fold_dict[f"fold{i}"] = fold_ds
+
+    test_ds = DARTDataset(root = root, tg_num = tg_num, split = 'test')
+
+    return CrossValDataset(fold_dict, test_dataset=test_ds)
 
 
 if __name__ == '__main__':
     root = '../../dataset'
     
-    dataset = DARTDataset('../dataset', 414)
+    dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'train', fold = 1)
+    dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'valid', fold = 1)
+    dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'test', fold = 1)
+    
     print(dataset[0])
