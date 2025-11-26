@@ -1,0 +1,80 @@
+{
+  "dataset": "TG421",
+  "fingerprint_type": "RDKit",
+  "experiment_type": "COMBINED",
+  "random_state": 42,
+  "total_samples": 481,
+  "total_features": 2167,
+  "includes_smiles": true,
+  "includes_chemical": true,
+  "trainval_samples": 384,
+  "test_samples": 97,
+  "n_folds": 5,
+  "folds": [
+    {
+      "fold": 1,
+      "train_size": 307,
+      "val_size": 77,
+      "train_class_dist": {
+        "0": 285,
+        "1": 22
+      },
+      "val_class_dist": {
+        "0": 72,
+        "1": 5
+      }
+    },
+    {
+      "fold": 2,
+      "train_size": 307,
+      "val_size": 77,
+      "train_class_dist": {
+        "0": 285,
+        "1": 22
+      },
+      "val_class_dist": {
+        "0": 72,
+        "1": 5
+      }
+    },
+    {
+      "fold": 3,
+      "train_size": 307,
+      "val_size": 77,
+      "train_class_dist": {
+        "0": 286,
+        "1": 21
+      },
+      "val_class_dist": {
+        "0": 71,
+        "1": 6
+      }
+    },
+    {
+      "fold": 4,
+      "train_size": 307,
+      "val_size": 77,
+      "train_class_dist": {
+        "0": 286,
+        "1": 21
+      },
+      "val_class_dist": {
+        "0": 71,
+        "1": 6
+      }
+    },
+    {
+      "fold": 5,
+      "train_size": 308,
+      "val_size": 76,
+      "train_class_dist": {
+        "0": 286,
+        "1": 22
+      },
+      "val_class_dist": {
+        "0": 71,
+        "1": 5
+      }
+    }
+  ]
+}

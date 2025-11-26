@@ -1,0 +1,100 @@
+======================================================================
+EXACT TRAIN/VALIDATION/TEST SPLIT WITH SMILES AND CHEMICAL NAMES
+======================================================================
+
+Dataset: TG421
+Fingerprint Type: RDKit
+Experiment Type: COMBINED
+Random State (Seed): 42
+Total Features: 2169
+Feature columns: Chemical | SMILES | [Features] | Toxicity
+
+SPLIT PROCESS:
+----------------------------------------------------------------------
+1. Initial split: 80% train+val / 20% test (random_state=42)
+2. 5-fold StratifiedKFold on train+val (random_state=42)
+3. For each fold: Keep all original data (Chemical, SMILES, features, label)
+4. Validation folds kept unchanged
+
+OVERALL DATA DISTRIBUTION:
+----------------------------------------------------------------------
+Total Samples: 481
+  Train+Val (80%): 384 samples
+  Test (20%): 97 samples
+Original Total Class Distribution: {0: 443, 1: 38}
+
+FOLD-BY-FOLD BREAKDOWN:
+----------------------------------------------------------------------
+
+Fold 1:
+  Training Set:
+    Size: 307 samples
+    Class dist: {0: 285, 1: 22}
+    % of total: 63.8%
+  Validation Set:
+    Size: 77 samples
+    Class dist: {0: 72, 1: 5}
+    % of total: 16.0%
+
+Fold 2:
+  Training Set:
+    Size: 307 samples
+    Class dist: {0: 285, 1: 22}
+    % of total: 63.8%
+  Validation Set:
+    Size: 77 samples
+    Class dist: {0: 72, 1: 5}
+    % of total: 16.0%
+
+Fold 3:
+  Training Set:
+    Size: 307 samples
+    Class dist: {0: 286, 1: 21}
+    % of total: 63.8%
+  Validation Set:
+    Size: 77 samples
+    Class dist: {0: 71, 1: 6}
+    % of total: 16.0%
+
+Fold 4:
+  Training Set:
+    Size: 307 samples
+    Class dist: {0: 286, 1: 21}
+    % of total: 63.8%
+  Validation Set:
+    Size: 77 samples
+    Class dist: {0: 71, 1: 6}
+    % of total: 16.0%
+
+Fold 5:
+  Training Set:
+    Size: 308 samples
+    Class dist: {0: 286, 1: 22}
+    % of total: 64.0%
+  Validation Set:
+    Size: 76 samples
+    Class dist: {0: 71, 1: 5}
+    % of total: 15.8%
+
+Test Set (20%):
+  Size: 97 samples
+  Class dist: {0: 86, 1: 11}
+  % of total data: 20.2%
+
+FILE NAMING CONVENTION:
+----------------------------------------------------------------------
+TG421_{fingerprint}_fold{N}_train_with_smiles.csv
+  - Training fold N with Chemical, SMILES, features, and label
+
+TG421_{fingerprint}_fold{N}_validation_with_smiles.csv
+  - Validation fold N with Chemical, SMILES, features, and label
+
+TG421_{fingerprint}_test_with_smiles.csv
+  - Test set with Chemical, SMILES, features, and label
+
+CSV STRUCTURE:
+----------------------------------------------------------------------
+Column 1: Chemical (compound name/ID)
+Column 2: SMILES (SMILES string)
+Column 3-N: Features (fingerprints/descriptors)
+Column N+1: Toxicity (0 or 1)
