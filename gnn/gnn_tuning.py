@@ -47,6 +47,7 @@ parser.add_argument('--batch_size', type = int, default = 128)
 parser.add_argument('--readout', type = str, default = 'max')
 parser.add_argument('--hidden_dim', type = int, default = 128)
 parser.add_argument('--num_layers', type = int, default = 5)
+parser.add_argument('--skip_con', type = str, default = None, help = 'None, all, last')
 parser.add_argument('--lr', type = float, default = 0.001)
 parser.add_argument('--epochs', type = int, default = 100)
 parser.add_argument('--optimizer', type = str, default = 'adam')
@@ -71,7 +72,8 @@ sweep_configuration = {
         'lr': {'values': [0.001, 0.003, 0.005]},
         'epochs': {'values': [100, 300]},
         'optimizer': {'values': ['adam', 'sgd']},
-        'weight_decay': {'values': [1e-4, 1e-5, 0]}
+        'weight_decay': {'values': [1e-4, 1e-5, 0]}, 
+        'skip_con': {'values': [None, 'last', 'all']}
     }       
 }
 sweep_id = wandb.sweep(sweep_configuration, project = f'gnn_dart')
@@ -88,6 +90,7 @@ def main():
     args.epochs = wandb.config.epochs
     args.optimizer = wandb.config.optimizer
     args.weight_decay = wandb.config.weight_decay
+    args.skip_con = wandb.config.skip_con
     
     wandb.run.name = f'tg{args.tg_num}-{args.model}-{args.optimizer}'
     

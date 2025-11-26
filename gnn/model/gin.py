@@ -44,6 +44,7 @@ class GraphIsomorphismNetwork(nn.Module):
         
         self.hidden_dim = args.hidden_dim
         self.num_layers = args.num_layers
+        self.skip_con = args.skip_con
         self.readout_layer = get_readout_layers(args.readout)
         
         # graph embedding layer (GNN)
@@ -62,12 +63,20 @@ class GraphIsomorphismNetwork(nn.Module):
 
         initial_emb = self.atom_encoder(x)
         node_features = initial_emb
-        for conv in self.convs:
-            node_features = conv(node_features, edge_index, edge_attr)
+        if self.skip_con == 'all':
+            for conv in self.convs:
+                node_features = conv(node_features + initial_emb, edge_index, edge_attr)
+        else:
+            for conv in self.convs:
+                node_features = conv(node_features, edge_index, edge_attr)
 
         # graph embedding
-        for readout in self.readout_layer:
-            graph_feature = readout(node_features + initial_emb, batch)
+        if self.skip_con == 'last':
+            for readout in self.readout_layer:
+                graph_feature = readout(node_features + initial_emb, batch)
+        else:
+            for readout in self.readout_layer:
+                graph_feature = readout(node_features + initial_emb, batch)
 
         logits = self.cls(graph_feature)
         probs = self.softmax(logits)
