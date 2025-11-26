@@ -6,6 +6,7 @@ from tqdm import tqdm
 import rdkit.Chem as Chem
 
 import torch
+from torch.utils.data import Dataset
 from torch_geometric.data import Data, InMemoryDataset
 
 
@@ -256,6 +257,17 @@ class CrossValDataset:
 
     def values(self):
         return self.folds.values()
+
+
+class ConcatDataset(Dataset):
+    def __init__(self, data_list):
+        self.data_list = data_list
+    
+    def __len__(self):
+        return len(self.data_list)
+    
+    def __getitem__(self, idx):
+        return self.data_list[idx]
 
 
 def build_cv_dataset(root, tg_num):

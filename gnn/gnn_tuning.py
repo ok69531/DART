@@ -110,11 +110,12 @@ def main():
         val_loader = DataLoader(dataset[f'fold{f}'].valid, batch_size = args.batch_size, shuffle = False)
         test_loader = DataLoader(dataset.test, batch_size = args.batch_size, shuffle = False)
 
+        input_dim = dataset['fold1'].train.num_classes
         criterion = torch.nn.CrossEntropyLoss()
         if args.model == 'gin':
-            model = GraphIsomorphismNetwork(dataset.num_classes, args).to(device)
+            model = GraphIsomorphismNetwork(input_dim, args).to(device)
         elif args.model == 'gcn':
-            model = GraphConvolutionalNetwork(dataset.num_classes, args).to(device)
+            model = GraphConvolutionalNetwork(input_dim, args).to(device)
         
         if args.optimizer == 'adam':
             optimizer = Adam(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)

@@ -11,8 +11,14 @@ from torch.optim import Adam, SGD
 from torch.utils.data import random_split
 from torch_geometric.loader import DataLoader
 
-from module.load_dataset import DARTDataset
 from module.utils import set_seed
+from module.load_dataset import (
+    DARTDataset, 
+    FoldDataset, 
+    CrossValDataset,
+    build_cv_dataset,
+    ConcatDataset
+)
 
 # gcn
 from model.gcn import (
@@ -57,97 +63,108 @@ def main():
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Cuda Available: {torch.cuda.is_available()}, {device}')
-
-    dataset = DARTDataset(root = 'dataset', tg_num = args.tg_num)
-
-    avg_nodes = 0.0
-    avg_edge_index = 0.0
-    for i in range(len(dataset)):
-        avg_nodes += dataset[i].x.shape[0]
-        avg_edge_index += dataset[i].edge_index.shape[1]
-
-    avg_nodes /= len(dataset)
-    avg_edge_index /= len(dataset)
-    logging.info('graphs {}, avg_nodes {:.4f}, avg_edge_index {:.4f}'.format(len(dataset), avg_nodes, avg_edge_index/2))
-
-    val_losses, val_aucs, val_f1s, val_accs, val_precs, val_recs = [], [], [], [], [], []
-    test_losses, test_aucs, test_f1s, test_accs, test_precs, test_recs = [], [], [], [], [], []
-    params_list = []
-    optim_params_list = []
-    
     logging.info(args)
+
+    dataset = build_cv_dataset(root = '../dataset', tg_num = args.tg_num)
+
+    data_list1 = [dataset['fold1'].train.get(i) for i in range(len(dataset['fold1'].train))]
+    data_list2 = [dataset['fold1'].valid.get(i) for i in range(len(dataset['fold2'].valid))]
+
+    merged_data_list = data_list1 + data_list2
+    train_data = ConcatDataset(merged_data_list)
+    test_data = dataset.test
     
-    for seed in range(args.num_runs):
-        logging.info(f'======================= Run: {seed} =================')
-        set_seed(seed)
-        
-        num_train = int(len(dataset) * args.train_frac)
-        num_valid = int(len(dataset) * args.val_frac)
-        num_test = len(dataset) - (num_train + num_valid)
-        assert num_train + num_valid + num_test == len(dataset)
+    # avg_nodes = 0.0
+    # avg_edge_index = 0.0
+    # for i in range(len(dataset)):
+    #     avg_nodes += dataset[i].x.shape[0]
+    #     avg_edge_index += dataset[i].edge_index.shape[1]
 
-        indices = torch.arange(len(dataset))
-        train_idx, val_idx, test_idx = random_split(indices, [num_train, num_valid, num_test])
+    # avg_nodes /= len(dataset)
+    # avg_edge_index /= len(dataset)
+    # logging.info('graphs {}, avg_nodes {:.4f}, avg_edge_index {:.4f}'.format(len(dataset), avg_nodes, avg_edge_index/2))
 
-        train_loader = DataLoader(dataset[list(train_idx)], batch_size = args.batch_size, shuffle = True)
-        val_loader = DataLoader(dataset[list(val_idx)], batch_size = args.batch_size, shuffle = False)
-        test_loader = DataLoader(dataset[list(test_idx)], batch_size = args.batch_size, shuffle = False)
+    # val_losses, val_aucs, val_f1s, val_accs, val_precs, val_recs = [], [], [], [], [], []
+    # test_losses, test_aucs, test_f1s, test_accs, test_precs, test_recs = [], [], [], [], [], []
+    # params_list = []
+    # optim_params_list = []
+    
+    
+    # for f in range(args.num_runs):
+    #     logging.info(f'======================= Run: {seed} =================')
+    set_seed(args.seed)
+    
+    # num_train = int(len(dataset) * args.train_frac)
+    # num_valid = int(len(dataset) * args.val_frac)
+    # num_test = len(dataset) - (num_train + num_valid)
+    # assert num_train + num_valid + num_test == len(dataset)
 
-        criterion = torch.nn.CrossEntropyLoss()
+    # indices = torch.arange(len(dataset))
+    # train_idx, val_idx, test_idx = random_split(indices, [num_train, num_valid, num_test])
+
+    # train_loader = DataLoader(dataset[list(train_idx)], batch_size = args.batch_size, shuffle = True)
+    # val_loader = DataLoader(dataset[list(val_idx)], batch_size = args.batch_size, shuffle = False)
+    # test_loader = DataLoader(dataset[list(test_idx)], batch_size = args.batch_size, shuffle = False)
+
+    train_loader = DataLoader(train_data, batch_size = args.batch_size, shuffle = True)
+    test_loader = DataLoader(test_data, batch_size = args.batch_size, shuffle = False)
+    
+    input_dim = dataset['fold1'].train.num_classes
+    criterion = torch.nn.CrossEntropyLoss()
+    if args.model == 'gin':
+        model = GraphIsomorphismNetwork(input_dim, args).to(device)
+    elif args.model == 'gcn':
+        model = GraphConvolutionalNetwork(input_dim, args).to(device)
+    
+    if args.optimizer == 'adam':
+        optimizer = Adam(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)
+    elif args.optimizer == 'sgd':
+        optimizer = SGD(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)
+
+    best_train_loss, best_train_auc, best_train_f1 = 100, 0, 0
+    final_test_loss, final_test_auc, final_test_f1 = 100, 0, 0
+
+    for epoch in range(1, args.epochs+1):
         if args.model == 'gin':
-            model = GraphIsomorphismNetwork(dataset.num_classes, args).to(device)
+            train_loss, _ = gin_train(model, optimizer, device, train_loader, criterion)
+            _, train_metrics, _ = gin_evaluation(model, device, train_loader, criterion)
+            test_loss, test_metrics, _ = gin_evaluation(model, device, test_loader, criterion)
         elif args.model == 'gcn':
-            model = GraphConvolutionalNetwork(dataset.num_classes, args).to(device)
-        
-        if args.optimizer == 'adam':
-            optimizer = Adam(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)
-        elif args.optimizer == 'sgd':
-            optimizer = SGD(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)
+            train_loss, _ = gcn_train(model, optimizer, device, train_loader, criterion)
+            _, train_metrics, _ = gcn_evaluation(model, device, train_loader, criterion)
+            test_loss, test_metrics, _ = gcn_evaluation(model, device, test_loader, criterion)
 
-        best_val_loss, best_val_auc, best_val_f1 = 100, 0, 0
-        final_test_loss, final_test_auc, final_test_f1 = 100, 0, 0
+        logging.info('=== epoch: {}'.format(epoch))
+        logging.info('Train loss: {:.5f}, Auc: {:.5f}, F1: {:.5f} | Test loss: {:.5f}, Auc: {:.5f}, F1: {:.5f}'.format(
+                            train_loss, train_metrics['auc'], train_metrics['f1'],
+                            test_loss, test_metrics['auc'], test_metrics['f1']))
 
-        for epoch in range(1, args.epochs+1):
-            if args.model == 'gin':
-                train_loss, _ = gin_train(model, optimizer, device, train_loader, criterion)
-                val_loss, val_sub_metrics, _ = gin_evaluation(model, device, val_loader, criterion)
-                test_loss, test_sub_metrics, _ = gin_evaluation(model, device, test_loader, criterion)
-            elif args.model == 'gcn':
-                train_loss, _ = gcn_train(model, optimizer, device, train_loader, criterion)
-                val_loss, val_sub_metrics, _ = gcn_evaluation(model, device, val_loader, criterion)
-                test_loss, test_sub_metrics, _ = gcn_evaluation(model, device, test_loader, criterion)
-
-            logging.info('=== epoch: {}'.format(epoch))
-            logging.info('Train loss: {:.5f} | Validation loss: {:.5f}, Auc: {:.5f}, F1: {:.5f} | Test loss: {:.5f}, Auc: {:.5f}, F1: {:.5f}'.format(
-                                train_loss, val_loss, val_sub_metrics['auc'], val_sub_metrics['f1'],
-                                test_loss, test_sub_metrics['auc'], test_sub_metrics['f1']))
-
-            if (val_sub_metrics['f1'] > best_val_f1) or \
-                ((val_loss < best_val_loss) and (val_sub_metrics['f1'] == best_val_f1)):
-                best_val_loss = val_loss
-                best_val_f1 = val_sub_metrics['f1']; best_val_auc = val_sub_metrics['auc']
-                best_val_acc = val_sub_metrics['accuracy']; best_val_prec = val_sub_metrics['precision']; best_val_rec = val_sub_metrics['recall']
-                final_test_loss = test_loss
-                final_test_f1 = test_sub_metrics['f1']; final_test_auc = test_sub_metrics['auc']
-                final_test_acc = test_sub_metrics['accuracy']; final_test_prec = test_sub_metrics['precision']; final_test_rec = test_sub_metrics['recall']
-                
-                # if args.model == 'gin':
-                params = deepcopy(model.state_dict())
-                optim_params = deepcopy(optimizer.state_dict())
-                
-        val_losses.append(best_val_loss); test_losses.append(final_test_loss)
-        val_aucs.append(best_val_auc); test_aucs.append(final_test_auc)
-        val_f1s.append(best_val_f1); test_f1s.append(final_test_f1)
-        val_accs.append(best_val_acc); test_accs.append(final_test_acc)
-        val_precs.append(best_val_prec); test_precs.append(final_test_prec)
-        val_recs.append(best_val_rec); test_recs.append(final_test_rec)
-        params_list.append(params); optim_params_list.append(optim_params)
+        if (train_metrics['f1'] > best_train_f1) or \
+            ((train_loss < best_train_loss) and (train_metrics['f1'] == best_train_f1)):
+            best_trian_loss = train_loss
+            best_train_f1 = train_metrics['f1']; best_train_auc = train_metrics['auc']
+            best_train_acc = train_metrics['accuracy']; best_train_prec = train_metrics['precision']; best_val_rec = train_metrics['recall']
+            final_test_loss = test_loss
+            final_test_f1 = test_metrics['f1']; final_test_auc = test_metrics['auc']
+            final_test_acc = test_metrics['accuracy']; final_test_prec = test_metrics['precision']; final_test_rec = test_metrics['recall']
+            
+            # if args.model == 'gin':
+            params = deepcopy(model.state_dict())
+            optim_params = deepcopy(optimizer.state_dict())
+            
+    # val_losses.append(best_val_loss); test_losses.append(final_test_loss)
+    # val_aucs.append(best_val_auc); test_aucs.append(final_test_auc)
+    # val_f1s.append(best_val_f1); test_f1s.append(final_test_f1)
+    # val_accs.append(best_val_acc); test_accs.append(final_test_acc)
+    # val_precs.append(best_val_prec); test_precs.append(final_test_prec)
+    # val_recs.append(best_val_rec); test_recs.append(final_test_rec)
+    # params_list.append(params); optim_params_list.append(optim_params)
 
     checkpoints = {
-        'params_dict': params_list,
-        'optim_dict': optim_params_list,
-        'val_f1s': val_f1s,
-        'test_f1s': test_f1s
+        'params_dict': params,
+        'optim_dict': optim_params,
+        'val_f1s': best_train_f1,
+        'test_f1s': final_test_f1
     }
     
     save_path = f'../saved_result/tg{args.tg_num}'
@@ -155,7 +172,7 @@ def main():
         pass
     else:
         os.makedirs(save_path)
-    save_path = os.path.join(save_path, f'tg{args.tg_num}_{args.model}.pt')
+    save_path = os.path.join(save_path, f'{args.model}.pt')
     torch.save(checkpoints, save_path)
     
     logging.info('')
@@ -163,11 +180,17 @@ def main():
     logging.info('TG: {}'.format(args.tg_num))
 
     logging.info('')
-    logging.info('test f1: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_f1s) * 100, np.std(test_f1s) * 100))
-    logging.info('test precision: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_precs) * 100, np.std(test_precs) * 100))
-    logging.info('test recall: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_recs) * 100, np.std(test_recs) * 100))
-    logging.info('test accuracy: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_accs) * 100, np.std(test_accs) * 100))
-    logging.info('test roc-auc: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_aucs) * 100, np.std(test_aucs) * 100))
+    logging.info('test f1: ${:.2f}$'.format(final_test_f1 * 100))
+    logging.info('test precision: ${:.2f}$'.format(final_test_prec * 100))
+    logging.info('test recall: ${:.2f}$'.format(final_test_rec * 100))
+    logging.info('test accuracy: ${:.2f}$'.format(final_test_acc * 100))
+    logging.info('test roc-auc: ${:.2f}$'.format(final_test_auc * 100))
+    
+    # logging.info('test f1: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_f1s) * 100, np.std(test_f1s) * 100))
+    # logging.info('test precision: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_precs) * 100, np.std(test_precs) * 100))
+    # logging.info('test recall: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_recs) * 100, np.std(test_recs) * 100))
+    # logging.info('test accuracy: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_accs) * 100, np.std(test_accs) * 100))
+    # logging.info('test roc-auc: ${{{:.3f}}}_{{\\pm {:.3f}}}$'.format(np.mean(test_aucs) * 100, np.std(test_aucs) * 100))
 
 
 if __name__ == '__main__':
