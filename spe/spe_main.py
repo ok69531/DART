@@ -2,6 +2,7 @@ import sys
 sys.path.append('../')
 
 import logging
+import warnings
 from functools import partial
 
 import torch
@@ -27,6 +28,7 @@ from spe_trainer import (
 from spe_model import construct_model
 
 
+warnings.filterwarnings('ignore')
 logging.basicConfig(format = '', level = logging.INFO)
 
 
