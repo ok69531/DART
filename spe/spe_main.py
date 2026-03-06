@@ -81,6 +81,7 @@ scheduler = optim.lr_scheduler.LambdaLR(
 
 best_val_loss, best_val_f1, best_val_auc = 100, 0, 0
 final_test_loss, final_test_f1, final_test_auc = 100, 0, 0
+final_test_prec, final_test_rec, final_test_auc, final_test_acc = 0, 0, 0, 0
 
 for epoch in range(1, args.n_epochs + 1):
     train_loss = training(model, train_loader, optimizer, scheduler, criterion, device)
