@@ -113,7 +113,7 @@ def evaluation(model, loader, criterion, device):
     y_true = torch.cat(y_true, dim = 0).numpy()
     y_pred_prob = torch.cat(y_pred_prob, dim = 0).numpy()
     y_pred = np.where(y_pred_prob > 0.5, 1, 0)
-    total_loss /= len(loader)
+    total_loss /= len(loader.dataset)
     
     metrics = {
         'loss': total_loss,
