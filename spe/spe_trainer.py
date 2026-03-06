@@ -96,7 +96,7 @@ def evaluation(model, loader, criterion, device):
     model.eval()
     
     total_loss = 0
-    y_true, y_pred_prob = ([] for _ in range(3))
+    y_true, y_pred_prob = ([] for _ in range(2))
     
     for batch in loader:
         batch = batch.to(device)
