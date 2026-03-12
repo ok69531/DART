@@ -42,7 +42,7 @@ def load_args():
     
     # data arguments
     parser.add_argument('--data_path', default = '../dataset', type = str)
-    parser.add_argument('--assay_aname', default = None)
+    parser.add_argument('--assay_name', default = None)
     parser.add_argument('--tg_num', default = None)
     parser.add_argument('--test_size', default = 0.2, type = float)
     parser.add_argument('--random_state', default = 42, type = int)
