@@ -2,7 +2,6 @@ import sys
 sys.path.append('../')
 
 import os
-import smogn
 import logging
 import warnings
 import argparse
