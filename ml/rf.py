@@ -98,6 +98,7 @@ def main():
         "max_samples": [None, 0.7, 0.85],
     }
     params = ParameterGrid(params_dict)
+    logging.info(f'The number of hyperparameter combinations:{len(params)}')
     
     result = {'model': {}, 'mae': {}, 'mse': {}, 'rmse': {}, 'r2': {}}
     kf = KFold(n_splits = 5, shuffle = True, random_state = args.random_state)
