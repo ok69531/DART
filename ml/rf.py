@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from rdkit import RDLogger
 
 import matplotlib.pyplot as plt
 
@@ -34,6 +35,7 @@ from modules.load_dataset import DARTDatasetREG
 
 
 warnings.filterwarnings('ignore')
+RDLogger.DisableLog('rdApp.*')
 logging.basicConfig(format='', level=logging.INFO)
 
 
@@ -71,8 +73,8 @@ def main():
         split = 'test', test_size = args.test_size, random_state = args.random_state
     )
     
-    x_tr, y_tr, _ = to_numpy_dataset(train_dataset, args.fp_type)
-    x_te, y_te, _ = to_numpy_dataset(test_dataset, args.fp_type)
+    x_tr, y_tr, x_te, y_te, _ = to_numpy_dataset(train_dataset, test_dataset, args.fp_type)
+    # x_te, y_te, _ = to_numpy_dataset(test_dataset, args.fp_type)
     
     scaler = MinMaxScaler()
     x_tr = scaler.fit_transform(x_tr)
@@ -129,7 +131,7 @@ def main():
             result['rmse'][model_key].append(np.sqrt(mean_squared_error(fold_val_y, pred)))
             result['r2'][model_key].append(r2_score(fold_val_y, pred))
         
-        save_results(result, path = 'saved_model', file_name = f'rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+        save_results(result, path = f'saved_model/{args.assay_name}', file_name = f'rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
         
     best_model_key, best_params, best_r2 = find_best_model(result, metric = 'r2')
     
@@ -157,7 +159,7 @@ def main():
     logging.info(f"Test RMSE: {test_rmse:.5f}")
     logging.info(f"Test R2: {test_r2:.5f}")
     
-    save_results(final_model.get_params(), path = 'saved_model', file_name = f'best_rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    save_results(final_model.get_params(), path = f'saved_model/{args.assay_name}', file_name = f'best_rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
 
