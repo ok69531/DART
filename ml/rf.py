@@ -161,6 +161,9 @@ def main():
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
 
+if __name__ == '__main__':
+    main()
+
 
 # pairplot
 # import seaborn as sns
