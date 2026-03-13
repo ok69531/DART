@@ -93,11 +93,11 @@ def main():
     params_dict = {
         "n_estimators": [5, 10, 30, 50, 100, 300, 500, 800],
         "criterion": ['absolute_error', 'friedman_mse'],
-        "max_depth": [None, 3, 5, 10, 20],
-        "min_samples_split": [2, 5, 10],
-        "min_samples_leaf": [1, 2, 4, 8],
+        # "max_depth": [None, 5, 10],
+        "min_samples_split": [2, 5],
+        "min_samples_leaf": [1, 2, 4],
         "max_features": [1.0, 0.5, "sqrt"],
-        "max_samples": [None, 0.7, 0.85],
+        # "max_samples": [None, 0.7],
     }
     params = ParameterGrid(params_dict)
     logging.info(f'The number of hyperparameter combinations:{len(params)}')
@@ -117,8 +117,12 @@ def main():
             fold_tr_x, fold_val_x = x_tr[train_idx], x_tr[val_idx]
             fold_tr_y, fold_val_y = y_tr[train_idx], y_tr[val_idx]
             
+            # w = (fold_tr_y - fold_tr_y.min()) / (fold_tr_y.max() - fold_tr_y.min() + 1e-8)
+            # sample_weight = 1.0 + w
+            
             model = RandomForestRegressor(random_state = args.random_state, **params[p])
             model.fit(fold_tr_x, fold_tr_y)
+            # model.fit(fold_tr_x, fold_tr_y, sample_weight = sample_weight)
             pred = model.predict(fold_val_x)
             
             # print('scaled mse', mean_squared_error(fold_val_y, pred))
