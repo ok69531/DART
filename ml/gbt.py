@@ -116,7 +116,7 @@ def main():
             fold_tr_x, fold_val_x = x_tr[train_idx], x_tr[val_idx]
             fold_tr_y, fold_val_y = y_tr[train_idx], y_tr[val_idx]
             
-            model = GradientBoostingRegressor(**params[p])
+            model = GradientBoostingRegressor(random_state = args.random_state, **params[p])
             model.fit(fold_tr_x, fold_tr_y)
             pred = model.predict(fold_val_x)
             
@@ -138,7 +138,7 @@ def main():
     logging.info(f'Validation MSE: {best_mse:.5f}')    
     logging.info(f'Validation RMSE: {best_rmse:.5f}')    
     
-    final_model = GradientBoostingRegressor(**best_params)
+    final_model = GradientBoostingRegressor(random_state = args.random_state, **best_params)
     final_model.fit(x_tr, y_tr)
     pred = final_model.predict(x_te)
     pred = 10 ** pred
