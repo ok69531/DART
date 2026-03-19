@@ -148,12 +148,24 @@ def main():
     test_rmse = np.sqrt(mean_squared_error(y_te, pred))
     test_r2 = r2_score(y_te, pred)
     
+    test_metric = {
+        'mae': test_mae,
+        'mse': test_mse,
+        'rmse': test_rmse,
+        'r2': test_r2
+    }
+    
     logging.info(f"Test MAE: {test_mae:.5f}")
     logging.info(f"Test MSE: {test_mse:.5f}")
     logging.info(f"Test RMSE: {test_rmse:.5f}")
     logging.info(f"Test R2: {test_r2:.5f}")
     
-    save_results(final_model.get_params(), path = f'saved_model/{args.assay_name}', file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    checkpoints = {
+        'params': final_model.get_params(),
+        'metric': test_metric
+    }
+    
+    save_results(checkpoints, path = f'saved_model/{args.assay_name}', file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
 
