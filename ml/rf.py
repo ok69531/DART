@@ -91,12 +91,13 @@ def main():
         x_te = x_te[:, top_idx]
     
     params_dict = {
-        "n_estimators": [5, 10, 30, 50, 100, 300, 500, 800],
-        "criterion": ['absolute_error', 'friedman_mse'],
+        "n_estimators": [5, 10, 30, 50, 100, 300],
+        "criterion": ['friedman_mse'],
+        # "criterion": ['absolute_error', 'friedman_mse'],
         # "max_depth": [None, 5, 10],
         "min_samples_split": [2, 5],
         "min_samples_leaf": [1, 2, 4],
-        "max_features": [1.0, 0.5, "sqrt"],
+        "max_features": [1.0, "sqrt"],
         # "max_samples": [None, 0.7],
     }
     params = ParameterGrid(params_dict)

@@ -95,8 +95,8 @@ def main():
         "n_estimators": [5, 10, 50, 100, 150],
         'learning_rate': [0.1, 0.05, 0.01, 0.005, 0.001],
         'max_depth': [3, 5],
-        'min_samples_split': [2, 3],
-        'loss': ['squared_error', 'huber']
+        # 'min_samples_split': [2, 3],
+        'loss': ['absolute_error', 'huber']
     }
     params = ParameterGrid(params_dict)
     logging.info(f'The number of hyperparameter combinations:{len(params)}')
