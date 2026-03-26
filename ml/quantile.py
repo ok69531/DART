@@ -93,7 +93,7 @@ def main():
     
     params_dict = {
         "alpha": [1e-6, 5e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1],
-        "solver": ['highs', 'highs-ds', 'highs-ipm'],
+        "solver": ['highs-ds', 'highs-ipm'],
         'fit_intercept': [True, False]
     }
     params = ParameterGrid(params_dict)
