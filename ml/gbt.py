@@ -125,7 +125,7 @@ def main():
             result['rmse'][model_key].append(np.sqrt(mean_squared_error(fold_val_y, pred)))
             result['r2'][model_key].append(r2_score(fold_val_y, pred))
         
-        save_results(result, path = f'saved_model/{args.assay_name}', file_name = f'quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+        save_results(result, path = f'saved_model/{args.assay_name}', file_name = f'gbt_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
             
     best_model_key, best_params, best_r2 = find_best_model(result, metric = 'r2')
     
@@ -165,7 +165,7 @@ def main():
         'metric': test_metric
     }
     
-    save_results(checkpoints, path = f'saved_model/{args.assay_name}', file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    save_results(checkpoints, path = f'saved_model/{args.assay_name}', file_name = f'best_gbt_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
 

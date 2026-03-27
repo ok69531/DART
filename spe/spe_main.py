@@ -40,7 +40,7 @@ args = load_spe_args()
 logging.info(args)
 
 
-args.assay_name = 'TOX21_p53_BLA_p2_ratio'
+# args.assay_name = 'TOX21_p53_BLA_p2_ratio'
 
 dataset_path = '../dataset'
 train_dataset = DARTDataset(
