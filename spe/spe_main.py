@@ -69,7 +69,10 @@ kwargs = {}
 kwargs['residual'] = args.residual
 kwargs['feature_type'] = 'discrete'
 
-criterion = nn.BCEWithLogitsLoss()
+if args.task == 'cls':
+    criterion = nn.BCEWithLogitsLoss()
+elif args.task == 'reg':
+    criterion = nn.L1Loss(reduction = 'mean')
 model = construct_model(args, create_mlp, **kwargs)
 model.to(device)
 

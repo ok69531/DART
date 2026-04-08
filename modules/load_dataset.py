@@ -323,7 +323,7 @@ class DARTDatasetCLS(InMemoryDataset):
 class DARTDatasetREG(InMemoryDataset):
     def __init__(
         self, 
-        root, assay_name = None, tg_num = None, 
+        root, assay_name = None, tg_num = None, expose_type = None,
         split = None, test_size = 0.2, random_state = 42, 
         removeHs = False, transform = None, pre_transform = None, pre_filter = None
     ):
@@ -347,10 +347,27 @@ class DARTDatasetREG(InMemoryDataset):
                 test_size=0.2,
                 random_state=42,
             )
+            
+            # 4) tg
+            ds_train = DARTDatasetREG(
+                root='data',
+                tg_num = 421,
+                expose_type = 'mgkg',
+                split='train',
+                test_size=0.2,
+                random_state=42,
+            )
         """
         self.root = root
         self.tg = tg_num
-        self.assay_name = assay_name
+        self.expose_type = expose_type
+        if self.tg not in [414, 416, 421, None]:
+            raise ValueError('Invalid TG Number. Only support 414, 416, and 421.')
+        
+        if self.tg is not None:
+            self.assay_name = 'value'
+        else:
+            self.assay_name = assay_name
         
         self.split = split
         self.test_size = test_size
@@ -358,7 +375,7 @@ class DARTDatasetREG(InMemoryDataset):
         self.removeHs = removeHs
         
         if self.tg is None:
-            self.data_root = f'ToxCast'
+            self.data_root = 'TC_REG'
         elif self.tg:
             self.data_root = f'TG{tg_num}'
         else:
@@ -375,18 +392,21 @@ class DARTDatasetREG(InMemoryDataset):
     
     @property
     def raw_dir(self):
-        return os.path.join(self.root, 'raw', 'TC_REG')
+        return os.path.join(self.root, 'raw', self.data_root)
     
     @property
     def processed_dir(self):
-        return os.path.join(self.root, 'processed', 'TC_REG', self.data_root)
+        return os.path.join(self.root, 'processed', self.data_root)
     
     @property
     def processed_file_names(self):
         assay_tag = 'all' if self.assay_name is None else self.assay_name
         split_tag = 'full' if self.split is None else self.split
-
-        filename = f'{self.data_root}_{assay_tag}_{split_tag}.pt'
+        
+        if self.tg is None:
+            filename = f'ToxCast_{assay_tag}_{split_tag}.pt'
+        else:
+            filename = f'TG{self.tg}_{self.expose_type}_{split_tag}'
         return [filename]
 
     @property
@@ -394,11 +414,14 @@ class DARTDatasetREG(InMemoryDataset):
         return 2
     
     def _load_raw_dataset(self):
-        self.raw_data = pd.read_csv(os.path.join(self.raw_dir, 'data.csv'))
+        if self.tg is None:
+            self.raw_data = pd.read_csv(os.path.join(self.raw_dir, 'data.csv'))
+        else:
+            self.raw_data = pd.read_excel(os.path.join(self.raw_dir, f'tg{self.tg}_{self.expose_type}_reg.xlsx'))
         self.raw_data = self.raw_data.dropna(subset=['SMILES']).copy()
         self.raw_data = self.raw_data[self.raw_data['SMILES'] != ''].reset_index(drop=True)
         if 'SMILES' not in self.raw_data.columns:
-            raise ValueError("Input CSV must contain a 'SMILES' column.")
+            raise ValueError("Input File must contain a 'SMILES' column.")
     
     def _smiles_screen(self):
         mols = [Chem.MolFromSmiles(x) for x in self.raw_data.SMILES]
@@ -572,49 +595,56 @@ def _atom_feature(mol):
 
 
 if __name__ == '__main__':
-    root = '../dataset'
+    # root = '../dataset'
     
-    dataset = DARTDatasetCLS(root, tier = 1)
+    # dataset = DARTDatasetCLS(root, tier = 1)
     
-    train_dataset = DARTDatasetCLS(
-        root,
-        tier=1,
-        assay_name='TOX21_p53_BLA_p2_ratio',
-        split='train',
-        test_size=0.2,
-        random_state=42,
-    )
+    # train_dataset = DARTDatasetCLS(
+    #     root,
+    #     tier=1,
+    #     assay_name='TOX21_p53_BLA_p2_ratio',
+    #     split='train',
+    #     test_size=0.2,
+    #     random_state=42,
+    # )
 
-    test_dataset = DARTDatasetCLS(
-        root,
-        tier=1,
-        assay_name='TOX21_p53_BLA_p2_ratio',
-        split='test',
-        test_size=0.2,
-        random_state=42,
-    )
-    # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'train', fold = 1)
-    # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'valid', fold = 1)
-    # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'test', fold = 1)
+    # test_dataset = DARTDatasetCLS(
+    #     root,
+    #     tier=1,
+    #     assay_name='TOX21_p53_BLA_p2_ratio',
+    #     split='test',
+    #     test_size=0.2,
+    #     random_state=42,
+    # )
+    # # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'train', fold = 1)
+    # # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'valid', fold = 1)
+    # # dataset = DARTDataset(root = '../../dataset', tg_num = 414, split = 'test', fold = 1)
+    
+    # print(dataset[0])
+    # print(dataset[0].y)
+    
+    # print(train_dataset)
+    # print(train_dataset[0])
+    # print(train_dataset[0].y)
+
+    # print(test_dataset)
+    # print(test_dataset[0])
+    # print(test_dataset[0].y)
+    
+    root = '../dataset'
+    dataset = DARTDatasetREG(root)
     
     print(dataset[0])
     print(dataset[0].y)
-    
-    print(train_dataset)
-    print(train_dataset[0])
-    print(train_dataset[0].y)
-
-    print(test_dataset)
-    print(test_dataset[0])
-    print(test_dataset[0].y)
-    
-    
-    dataset = DARTDatasetREG(root)
 
     assay_dataset = DARTDatasetREG(
         root=root,
         assay_name='TOX21_p53_BLA_p2_ratio'
     )
+    
+    print(assay_dataset)
+    print(assay_dataset[0])
+    print(assay_dataset[0].y)
 
     train_dataset = DARTDatasetREG(
         root=root,
@@ -624,13 +654,30 @@ if __name__ == '__main__':
         random_state=42,
     )
 
-    print(dataset[0])
-    print(dataset[0].y)
+    print(train_dataset)
+    print(train_dataset[0])
+    print(train_dataset[0].y)
     
-    print(assay_dataset)
-    print(assay_dataset[0])
-    print(assay_dataset[0].y)
+    tg_dataset = DARTDatasetREG(
+        root = root,
+        tg_num = 421,
+        expose_type = 'mgkg',
+    )
+
+    print(tg_dataset)
+    print(tg_dataset[0])
+    print(tg_dataset[0].y)
+    
+    train_dataset = DARTDatasetREG(
+        root=root,
+        tg_num = 421,
+        expose_type = 'mgkg',
+        split = 'train',
+        test_size = 0.2,
+        random_state = 42,
+    )
 
     print(train_dataset)
     print(train_dataset[0])
     print(train_dataset[0].y)
+    

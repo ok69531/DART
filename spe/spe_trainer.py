@@ -12,7 +12,10 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
-    accuracy_score
+    accuracy_score,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score
 )
 
 
@@ -92,37 +95,49 @@ def training(model, loader, optimizer, scheduler, criterion, device):
 
 
 @torch.no_grad()
-def evaluation(model, loader, criterion, device):
+def evaluation(model, loader, criterion, device, args):
     model.eval()
     
     total_loss = 0
-    y_true, y_pred_prob = ([] for _ in range(2))
+    y_true, y_pred_score = ([] for _ in range(2))
     
     for batch in loader:
         batch = batch.to(device)
         
         score = model(batch)
-        pred_prob = torch.sigmoid(score).to(torch.float32)
+        if args.task == 'reg':
+            y_pred_score.append(score.detach().cpu())
+        elif args.task == 'cls':
+            pred_prob = torch.sigmoid(score).to(torch.float32)
+            y_pred_score.append(pred_prob.detach().cpu())
         
         loss = criterion(score, batch.y)
         total_loss += (loss * batch.y.size(0))
         
         y_true.append(batch.y.detach().cpu())
-        y_pred_prob.append(pred_prob.detach().cpu())
     
     y_true = torch.cat(y_true, dim = 0).numpy()
-    y_pred_prob = torch.cat(y_pred_prob, dim = 0).numpy()
-    y_pred = np.where(y_pred_prob > 0.5, 1, 0)
+    y_pred_score = torch.cat(y_pred_score, dim = 0).numpy()
     total_loss /= len(loader.dataset)
     
-    metrics = {
-        'loss': total_loss,
-        'f1': f1_score(y_true, y_pred),
-        'precision': precision_score(y_true, y_pred),
-        'recall': recall_score(y_true, y_pred),
-        'auc': roc_auc_score(y_true, y_pred_prob),
-        'acc': accuracy_score(y_true, y_pred)
-    }
+    if args.task == 'reg':
+        metrics = {
+            'mae': mean_absolute_error(y_true, y_pred_score),
+            'mse': mean_squared_error(y_true, y_pred_score),
+            'rmse': np.sqrt(mean_squared_error(y_true, y_pred_score)),
+            'r2': r2_score(y_true, y_pred_score)
+        }
+    elif args.task == 'cls':
+        y_pred = np.where(y_pred_score > 0.5, 1, 0)
+    
+        metrics = {
+            'loss': total_loss,
+            'f1': f1_score(y_true, y_pred),
+            'precision': precision_score(y_true, y_pred),
+            'recall': recall_score(y_true, y_pred),
+            'auc': roc_auc_score(y_true, y_pred_score),
+            'acc': accuracy_score(y_true, y_pred)
+        }
     
     return metrics
     

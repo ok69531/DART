@@ -55,6 +55,9 @@ def load_spe_args():
     # miscellaneous
     parser.add_argument('--n_epochs', default = 1000, type = int)
     
+    # task
+    parser.add_argument('--task', default = 'reg', type = str, help = 'reg, cls')
+    
     try:
         args = parser.parse_args()
     except:

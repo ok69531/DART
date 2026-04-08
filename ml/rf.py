@@ -46,6 +46,7 @@ def load_args():
     parser.add_argument('--data_path', default = '../dataset', type = str)
     parser.add_argument('--assay_name', default = None)
     parser.add_argument('--tg_num', default = None)
+    parser.add_argument('--expose_type', default = None, help = 'mgkg, inhale')
     parser.add_argument('--test_size', default = 0.2, type = float)
     parser.add_argument('--random_state', default = 42, type = int)
     parser.add_argument('--fp_type', default = 'maccs', type = str, help = 'maccs, morgan, rdkit, layered, pattern')
@@ -65,11 +66,11 @@ def main():
     args = load_args()
 
     train_dataset = DARTDatasetREG(
-        root = args.data_path, assay_name = args.assay_name, tg_num = args.tg_num, 
+        root = args.data_path, assay_name = args.assay_name, tg_num = args.tg_num, expose_type = args.expose_type,
         split = 'train', test_size = args.test_size, random_state = args.random_state
     )
     test_dataset = DARTDatasetREG(
-        root = args.data_path, assay_name = args.assay_name, tg_num = args.tg_num, 
+        root = args.data_path, assay_name = args.assay_name, tg_num = args.tg_num, expose_type = args.expose_type, 
         split = 'test', test_size = args.test_size, random_state = args.random_state
     )
     
@@ -176,7 +177,15 @@ def main():
         'metric': test_metric
     }
     
-    save_results(checkpoints, path = f'saved_model/{args.assay_name}', file_name = f'best_rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    if args.tg_num is None:
+        save_results(checkpoints, 
+                     path = f'saved_model/{args.assay_name}', 
+                     file_name = f'best_rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    else:
+        save_results(checkpoints, 
+                     path = f'saved_model/{args.tg_num}_{args.expose_type}', 
+                     file_name = f'best_rf_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+        
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
 
