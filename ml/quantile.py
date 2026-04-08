@@ -43,9 +43,9 @@ def load_args():
     
     # data arguments
     parser.add_argument('--data_path', default = '../dataset', type = str)
-    parser.add_argument('--assay_name', default = None)
-    parser.add_argument('--tg_num', default = None)
-    parser.add_argument('--expose_type', default = None, help = 'mgkg, inhale')
+    parser.add_argument('--assay_name', default = None, type = str)
+    parser.add_argument('--tg_num', default = None, type = int)
+    parser.add_argument('--expose_type', default = None, type = str, help = 'mgkg, inhale')
     parser.add_argument('--test_size', default = 0.2, type = float)
     parser.add_argument('--random_state', default = 42, type = int)
     parser.add_argument('--fp_type', default = 'maccs', type = str, help = 'maccs, morgan, rdkit, layered, pattern')
@@ -63,6 +63,12 @@ def load_args():
 
 def main():
     args = load_args()
+    logging.info(args)
+    
+    if args.tg_num is None:
+        save_path = f'saved_model/{args.assay_name}'
+    else: 
+        save_path = f'saved_model/{args.tg_num}_{args.expose_type}'
     
     # args.assay_name = 'TOX21_SHH_3T3_GLI3_Antagonist'
     # args.fp_type = 'maccs'
@@ -124,7 +130,7 @@ def main():
             result['rmse'][model_key].append(np.sqrt(mean_squared_error(fold_val_y, pred)))
             result['r2'][model_key].append(r2_score(fold_val_y, pred))
         
-        save_results(result, path = f'saved_model/{args.assay_name}', file_name = f'quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+        save_results(result, path = save_path, file_name = f'quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
             
     best_model_key, best_params, best_r2 = find_best_model(result, metric = 'r2')
     
@@ -165,14 +171,8 @@ def main():
     }
     
     
-    if args.tg_num is None:
-        save_results(checkpoints, 
-                     path = f'saved_model/{args.assay_name}', 
-                     file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
-    else:
-        save_results(checkpoints, 
-                     path = f'saved_model/{args.tg_num}_{args.expose_type}', 
-                     file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json')
+    file_name = f'best_quantile_{args.fp_type}_feat_sel_{args.use_feat_sel}.json'
+    save_results(checkpoints, path = save_path, file_name = file_name)
     
     logging.info(f"Best model saved with R2: {test_r2:.5f}")
                 
