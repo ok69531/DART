@@ -2,7 +2,7 @@ import numpy as np
 
 import torch
 
-from torch_geometric.data import Data
+from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.utils import get_laplacian, to_dense_adj
 
 from spe_mlp import MLP
@@ -35,26 +35,84 @@ def create_mlp_ln(in_dims: int, out_dims: int, args) -> MLP:
 #     return instance
 
 
-def calc_eigh(instance: Data, args) -> Data:
-    # get spectrum
-    n = instance.num_nodes
-    L_edge_index, L_values = get_laplacian(instance.edge_index, normalization="sym", num_nodes=n)   # [2, X], [X]
-    L = to_dense_adj(L_edge_index, edge_attr=L_values, max_num_nodes=n).squeeze(dim=0)              # [N, N]
+# def calc_eigh(instance: Data, args) -> Data:
+#     # get spectrum
+#     n = instance.num_nodes
+#     L_edge_index, L_values = get_laplacian(instance.edge_index, normalization="sym", num_nodes=n)   # [2, X], [X]
+#     L = to_dense_adj(L_edge_index, edge_attr=L_values, max_num_nodes=n).squeeze(dim=0)              # [N, N]
 
-    Lambda = torch.zeros(1, args.pe_dims)   # [1, D_pe]
-    V = torch.zeros(n, args.pe_dims)        # [N, D_pe]
+#     Lambda = torch.zeros(1, args.pe_dims)   # [1, D_pe]
+#     V = torch.zeros(n, args.pe_dims)        # [N, D_pe]
 
-    d = min(n, args.pe_dims)   # number of eigen-pairs to use (then we zero-pad up to D_pe)
-    eigenvalues, eigenvectors = torch.linalg.eigh(L)   # [N], [N, N]
+#     d = min(n, args.pe_dims)   # number of eigen-pairs to use (then we zero-pad up to D_pe)
+#     eigenvalues, eigenvectors = torch.linalg.eigh(L)   # [N], [N, N]
+#     Lambda[0, :d] = eigenvalues[0:d]
+#     V[:, :d] = eigenvectors[:, 0:d]
+
+#     instance.update({"Lambda": Lambda, "V": V})
+    
+#     snorm = torch.FloatTensor(n, 1).fill_(1./float(n)).sqrt()
+#     instance.update({"snorm": snorm})
+
+#     return instance
+
+def calc_eigh_per_instance(instance, args):
+    try:
+        n = instance.num_nodes
+    except:
+        n = instance.x.size(0)
+    
+    L_edge_index, L_values = get_laplacian(instance.edge_index, normalization = 'sym', num_nodes = n)
+    L = to_dense_adj(L_edge_index, edge_attr = L_values, max_num_nodes = n).squeeze(dim = 0)
+    
+    Lambda = torch.zeros(1, args.pe_dims)
+    V = torch.zeros(n, args.pe_dims)
+    
+    d = min(n, args.pe_dims)
+    eigenvalues, eigenvectors = torch.linalg.eigh(L)
+    
     Lambda[0, :d] = eigenvalues[0:d]
     V[:, :d] = eigenvectors[:, 0:d]
-
-    instance.update({"Lambda": Lambda, "V": V})
+    
+    instance.update({'Lambda': Lambda, 'V': V})
     
     snorm = torch.FloatTensor(n, 1).fill_(1./float(n)).sqrt()
-    instance.update({"snorm": snorm})
-
+    instance.update({'snorm': snorm})
+    
     return instance
+
+
+def calc_eigh(obj, args):
+    # leaf: PyG Data면 계산 적용
+    if isinstance(obj, Data):
+        return calc_eigh_per_instance(obj, args)
+    
+    if isinstance(obj, InMemoryDataset):
+        return [calc_eigh(v, args) for v in obj]
+
+    # dict면 value들을 재귀 처리
+    if isinstance(obj, dict):
+        return {k: calc_eigh(v, args) for k, v in obj.items()}
+
+    # list면 원소들을 재귀 처리
+    if isinstance(obj, list):
+        return [calc_eigh(v, args) for v in obj]
+
+    # tuple도 들어올 수 있으면 (선택)
+    if isinstance(obj, tuple):
+        return tuple(calc_eigh(v, args) for v in obj)
+
+    # 그 외 타입은 그대로
+    return obj
+
+
+def log_transform_target(dataset):
+    new_dataset = []
+    for i in range(len(dataset)):
+        new_data = dataset[i]
+        new_data.y = torch.log10(new_data.y)
+        new_dataset.append(new_data)
+    return dataset
 
 
 def get_param_groups(model, args):
@@ -95,7 +153,7 @@ def training(model, loader, optimizer, scheduler, criterion, device):
 
 
 @torch.no_grad()
-def evaluation(model, loader, criterion, device, args):
+def evaluation(model, loader, criterion, device, args, original_scale = False):
     model.eval()
     
     total_loss = 0
@@ -119,6 +177,10 @@ def evaluation(model, loader, criterion, device, args):
     y_true = torch.cat(y_true, dim = 0).numpy()
     y_pred_score = torch.cat(y_pred_score, dim = 0).numpy()
     total_loss /= len(loader.dataset)
+    
+    if original_scale:
+        # y_true = 10 ** y_true
+        y_pred_score = 10 ** y_pred_score
     
     if args.task == 'reg':
         metrics = {

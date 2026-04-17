@@ -5,6 +5,19 @@ def load_spe_args():
     
     parser = argparse.ArgumentParser()
 
+    # data arguments
+    parser.add_argument('--data_path', default = '../dataset', type = str)
+    parser.add_argument('--assay_name', default = None, type = str)
+    parser.add_argument('--tg_num', default = None, type = int)
+    parser.add_argument('--expose_type', default = None, type = str, help = 'mgkg, inhale')
+    parser.add_argument('--test_size', default = 0.2, type = float)
+    parser.add_argument('--random_state', default = 42, type = int)
+    parser.add_argument('--tier', default = 1, type = int)
+    parser.add_argument('--batch_size', default = 128, type = int)
+    
+    # task
+    parser.add_argument('--task', default = 'reg', type = str, help = 'reg, cls')
+    
     # model attributes
     parser.add_argument('--node_emb_dims', default = 128, type = int)
     parser.add_argument('--pooling', default = 'mean', type = str)
@@ -38,25 +51,18 @@ def load_spe_args():
 
     # data attributes
     # parser.add_argument('--use_subset', default = True, type = bool)
-    parser.add_argument('--train_batch_size', default = 128, type = int)
-    parser.add_argument('--val_batch_size', default = 128, type = int)
-    parser.add_argument('--tier', default = 1, type = int)
-    parser.add_argument('--assay_name', default = None, type = str)
+    # parser.add_argument('--train_batch_size', default = 128, type = int)
+    # parser.add_argument('--val_batch_size', default = 128, type = int)
 
     # optimizer attributes
     parser.add_argument('--lr', default = 1e-3, type = float)
     parser.add_argument('--weight_decay', default = 3e-6, type = float)
-    parser.add_argument('--momentum', default = 0.9, type = float)
-    parser.add_argument('--nesterov', default = False, type = bool)
 
     # scheduler attributes
     parser.add_argument('--n_warmup_steps', default = 100, type = int)
 
     # miscellaneous
     parser.add_argument('--n_epochs', default = 1000, type = int)
-    
-    # task
-    parser.add_argument('--task', default = 'reg', type = str, help = 'reg, cls')
     
     try:
         args = parser.parse_args()
