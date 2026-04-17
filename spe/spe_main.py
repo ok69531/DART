@@ -1,9 +1,11 @@
 import sys
 sys.path.append('../')
 
+import os
 import logging
 import warnings
 from functools import partial
+from copy import deepcopy
 
 import numpy as np
 
@@ -110,6 +112,8 @@ def main():
             final_test_mse = test_metrics['mse']
             final_test_rmse = test_metrics['rmse']
             final_test_r2 = test_metrics['r2']
+            
+            model_param = deepcopy(model.state_dict())
         else:
             early_stop += 1
         
@@ -118,7 +122,20 @@ def main():
         
         if early_stop > 50: break
 
-
+    checkpoints = {
+        'params': model_param,
+        'metric':{
+            'test mae': final_test_mae,
+            'test mse': final_test_mse,
+            'test rmse': final_test_rmse,
+            'test r2': final_test_r2
+        }
+    }
+    
+    save_path = f'saved_model'
+    if not os.path.exists(save_path): os.makedirs(save_path)
+    torch.save(checkpoints, os.path.join(save_path, f'spe_{args.tg_num}_{args.expose_type}'))
+    
     logging.info('')
     logging.info('SPE')
     if args.assay_name is not None:
