@@ -134,7 +134,10 @@ def main():
     
     save_path = f'saved_model'
     if not os.path.exists(save_path): os.makedirs(save_path)
-    torch.save(checkpoints, os.path.join(save_path, f'spe_{args.tg_num}_{args.expose_type}'))
+    if args.tg_num is not None:
+        torch.save(checkpoints, os.path.join(save_path, f'spe_{args.tg_num}_{args.expose_type}'))
+    elif args.assay_name is not None:
+        torch.save(checkpoints, os.path.join(save_path, f'spe_{args.assay_name}'))
     
     logging.info('')
     logging.info('SPE')
