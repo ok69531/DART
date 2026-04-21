@@ -62,7 +62,10 @@ sweep_configuration = {
         'n_mlp_layers': {'values': [2, 3, 4]},
     }
 }
-sweep_id = wandb.sweep(sweep_configuration, project = f'DART-REG-SPE')
+if args.tg_num is not None:
+    sweep_id = wandb.sweep(sweep_configuration, project = f'DART-REG-SPE')
+elif args.assay_name is not None: 
+    sweep_id = wandb.sweep(sweep_configuration, project = f'TC-DART-REG-SPE')
 
 # args.assay_name = 'TOX21_p53_BLA_p2_ratio'
 # args.tg_num = 414
@@ -136,13 +139,13 @@ def main():
         best_val_mae, best_val_mse, best_val_rmse, best_val_r2 = 1e+10, 1e+10, 1e+10, -1e+10
         final_test_mae, final_test_mse, final_test_rmse, final_test_r2 = 1e+10, 1e+10, 1e+10, -1e+10
 
-        early_stop = 0
         for epoch in range(1, args.n_epochs + 1):
             train_loss = training(model, train_loader, optimizer, scheduler, criterion, device)
             val_metrics = evaluation(model, val_loader, criterion, device, args)
             val_mae = val_metrics['mae']; val_mse = val_metrics['mse']; val_rmse = val_metrics['rmse']; val_r2 = val_metrics['r2']
             
             if val_r2 > best_val_r2:
+                early_stop = 0
                 best_val_mae = val_mae
                 best_val_mse = val_mse
                 best_val_rmse = val_rmse
@@ -190,4 +193,4 @@ def main():
     # logging.info('Test RMSE: {:.2f}'.format(final_test_rmse))
     # logging.info('Test R2: {:.2f}'.format(final_test_r2))
 
-wandb.agent(sweep_id = sweep_id, function = main, count = 1000)
+wandb.agent(sweep_id = sweep_id, function = main, count = 100)
