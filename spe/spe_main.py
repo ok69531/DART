@@ -68,6 +68,7 @@ def main():
     train_dataset = log_transform_target(train_dataset)
     # test_dataset = log_transform_target(test_dataset)
 
+    set_seed(0)
     train_loader = DataLoader(train_dataset, batch_size = args.batch_size, shuffle = True)
     test_loader = DataLoader(test_dataset, batch_size = args.batch_size, shuffle = False)
 
@@ -80,7 +81,6 @@ def main():
     elif args.task == 'reg':
         criterion = nn.L1Loss(reduction = 'mean')
     
-    set_seed(0)
     model = construct_model(args, create_mlp, **kwargs)
     model.to(device)
 
@@ -95,7 +95,6 @@ def main():
     best_val_mae, best_val_mse, best_val_rmse, best_val_r2 = 1e+10, 1e+10, 1e+10, -1e+10
     final_test_mae, final_test_mse, final_test_rmse, final_test_r2 = 1e+10, 1e+10, 1e+10, -1e+10
 
-    early_stop = 0
     for epoch in range(1, args.n_epochs + 1):
         train_loss = training(model, train_loader, optimizer, scheduler, criterion, device)
         val_metrics = evaluation(model, train_loader, criterion, device, args)
@@ -114,14 +113,10 @@ def main():
             final_test_r2 = test_metrics['r2']
             
             model_param = deepcopy(model.state_dict())
-        else:
-            early_stop += 1
         
         logging.info('=== epoch: {}'.format(epoch))
         logging.info('Train mae: {:.5f} | Validation mae: {:.5f}, mse: {:.5f}, rmse: {:.5f}, r2: {:.5f}'.format(train_loss, val_mae, val_mse, val_rmse, val_r2))
         
-        if early_stop > 50: break
-
     checkpoints = {
         'params': model_param,
         'metric':{

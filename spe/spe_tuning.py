@@ -63,7 +63,7 @@ sweep_configuration = {
     }
 }
 if args.tg_num is not None:
-    sweep_id = wandb.sweep(sweep_configuration, project = f'DART-REG-SPE')
+    sweep_id = wandb.sweep(sweep_configuration, project = f'TG-DART-REG-SPE')
 elif args.assay_name is not None: 
     sweep_id = wandb.sweep(sweep_configuration, project = f'TC-DART-REG-SPE')
 
@@ -117,10 +117,11 @@ def main():
         num_val = len(train_dataset) - num_train
         train, val = random_split(train_dataset, lengths = [num_train, num_val], generator=torch.Generator().manual_seed(seed))
 
-        train_loader = DataLoader(train, batch_size = args.batch_size, shuffle = True)
+        train_loader = DataLoader(train, batch_size = args.batch_size, shuffle = True, generator=torch.Generator().manual_seed(seed))
         val_loader = DataLoader(val, batch_size = args.batch_size, shuffle = False)
         # test_loader = DataLoader(test_dataset, batch_size = args.batch_size, shuffle = False)
         
+        set_seed(0)
         if args.task == 'cls':
             criterion = nn.BCEWithLogitsLoss()
         elif args.task == 'reg':
